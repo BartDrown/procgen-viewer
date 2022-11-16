@@ -98,12 +98,10 @@ var resetSliders = function (name) {
 
 // Events on sliders
 height.onChange(function (value) {
-    console.log(value);
     resetSliders('height');
 });
 
 width.onChange(function (value) {
-    console.log(value);
     resetSliders('width');
 });
 
@@ -125,25 +123,21 @@ function renderPlane(width, height){
 }
 
 
-
-
 function colorSimplexNoise(objects, elevation, wave, offset){
 	const noise2D = createNoise2D();
 	const fbm = new FBM({
 		seed: Math.random()
 	})
-	const noiseMap = Generate(objects.length, objects[0].length, elevation, wave, offset)
-
-	for(const row of objects){
-		for(const object of row){
-			const noiseInPoint = noiseMap[object.position.x, object.position.y]
-			console.log(noiseInPoint);
+	const noiseMap = GenerateFbm(objects.length, objects[0].length, elevation, offset)
+	for(const [rowIndex, row] of objects.entries()){
+		for(const [columnIndex, object] of row.entries()){
+			const noiseInPoint = noiseMap[rowIndex][columnIndex]
 			// const noiseInPoint = calculateElevationNoise(noise2D, object.position.x, object.position.y, elevation);
-			object.material.color = new THREE.Color(noiseInPoint, noiseInPoint, noiseInPoint);
+			const color = getTerrainColor(noiseInPoint);
+			object.material.color = color;
 			object.position.set(object.position.x, object.position.y, noiseInPoint);
 
 		}
-
 	}
 }
 
@@ -153,7 +147,6 @@ function calculateElevationNoise(noise, x, y, elevation){
 	 0.125 * noise(x * 8 +13 , y * 8 + 14) +  0.625 * noise(x * 16 +13 , y * 16 + 14);
 	const noiseNormalized = noiseSum / (4+ 2+ 1 + 0.5 + 0.25 + 0.125 + 0.625);
 	const elevationValue= Math.pow(Math.abs(noiseNormalized), Math.abs(elevation));
-	console.log(elevationValue, noiseSum , noiseNormalized )
 	return elevationValue;
 }
 
@@ -166,7 +159,13 @@ class Wave{
 function Generate(width, height, scale, waves, offset){
 	const noiseMap = [];
 	const fbm = new FBM({
-		seed: Math.random()
+		seed: Math.random(),
+		scale: 0.06,
+        octaves: 6,
+        persistance: 0.5,
+        lacunarity: 2,
+        redistribution: 1,
+        height: 0,
 	})
 	const perlin = new Perlin(Math.random());
 
@@ -181,11 +180,7 @@ function Generate(width, height, scale, waves, offset){
             for(const wave of waves){
                 // sample the perlin noise taking into consideration amplitude and frequency
 				const vector2 = new THREE.Vector2(samplePosX * wave.frequency + wave.seed, samplePosY * wave.frequency + wave.seed);
-				console.log("First",samplePosX * wave.frequency + wave.seed)
-				console.log(samplePosY * wave.frequency + wave.seed)
-				console.log(perlin.get2(new THREE.Vector2(95, 19)))
-
-                noisePoint += wave.amplitude * perlin.get2(vector2);
+                noisePoint += wave.amplitude * fbm.get2(vector2);
                 normalization += wave.amplitude;
 				
             }
@@ -195,6 +190,63 @@ function Generate(width, height, scale, waves, offset){
 	}
 
 	return noiseMap;
+}
+
+function GenerateFbm(width, height, scale, offset){
+	const noiseMap = [];
+	// const fbm = new FBM({
+	// 	seed: Math.random(),
+	// 	scale: 0.06,
+    //     octaves: 6,
+    //     persistance: 0.5,
+    //     lacunarity: 2,
+    //     redistribution: 1,
+    //     height: 0,
+	// })
+
+	const fbm = new FBM({
+		seed: Math.random(),
+		scale: 0.03,
+        octaves: 5,
+        persistance: 0.5,
+        lacunarity: 2,
+        redistribution: 1,
+        height: 0,
+	})
+
+	for(let x = 0; x < width; ++x){
+		let row = []
+		for(let y = 0; y < height; ++y){
+			const samplePosX = x + offset.x;
+            const samplePosY = y + offset.y;
+			let noisePoint = 0;
+            // loop through each wave
+
+			const vector2 = new THREE.Vector2(samplePosX, samplePosY )
+			noisePoint = fbm.get2(vector2);
+
+
+			row.push(noisePoint);
+		}
+		noiseMap.push(row)
+	}
+
+	return noiseMap;
+}
+
+function getTerrainColor(fbmNoiseValue){
+	if( fbmNoiseValue < -0.7)
+		//water floor
+		return new THREE.Color(0x5fade2);
+	if(fbmNoiseValue < -0.45)
+		//dirt floor
+		return new THREE.Color(0x873600);
+	if(fbmNoiseValue < -0.3)
+		//sand/rock	floor
+		return new THREE.Color(0xb2babb);
+	if(-0.3 <= fbmNoiseValue)
+		//solid rock
+		return new THREE.Color(0x5d6d7e);					
 }
 
 </script>
