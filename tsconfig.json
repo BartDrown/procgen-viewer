@@ -9,6 +9,7 @@
       "noImplicitReturns": true,
       "strict": true,
       "moduleResolution":"node",
+      "module": "NodeNext"
     },
     "moduleResolution":"node"
   }

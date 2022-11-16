@@ -3,6 +3,8 @@ import * as dat from 'dat.gui';
 
 import { Vector2 } from 'three';
 
+export const main = ()=> {
+
 const {OrbitControls} = require('three-orbitcontrols');
 const {Perlin, FBM} = require('three-noise');
 
@@ -176,4 +178,8 @@ function getTerrainColor(fbmNoiseValue: number){
 
 function inRange(x: number, min: number, max: number) {
   return x >= min && x <= max;
+}	
+
 }
+
+main();
