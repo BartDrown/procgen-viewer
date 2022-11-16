@@ -73,9 +73,9 @@ var FizzyText = function () {
 	this.generateMap = ()=>{
 		// render()
 		scene.clear();
-		const objects = renderPlane(this.width, this.height);
 		const offset = new THREE.Vector2(this.offsetX, this.offsetY); 
-		colorSimplexNoise(objects, this.elevation, wave, offset);
+		renderPlane(this.width, this.height, offset);
+		// colorSimplexNoise(objects, this.elevation, wave, offset);
 	};
 };
 
@@ -105,21 +105,37 @@ width.onChange(function (value) {
     resetSliders('width');
 });
 
-function renderPlane(width, height){
-	let objects = [];
-	for(let i = 0; i < width; i++){
-			let row = [];
-			for(let j = 0; j < height; j++){
-				const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-				const material = new THREE.MeshBasicMaterial( {color: Math.random() * 0xffffff, side: THREE.DoubleSide} );
-				const plane = new THREE.Mesh( geometry, material );
-				plane.position.set(i - (width/2), - j + (height/2));
-				scene.add(plane);
-				row.push(plane)
-			}
-			objects.push(row);
+function renderPlane(width, height, offset){
+	const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshToonMaterial().set;
+	const mesh = new THREE.InstancedMesh(geometry, material, width * height);
+	const dummy = new THREE.Object3D();
+	mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); // will be updated every frame
+	scene.add(mesh);
+	
+	const noise2D = GenerateFbm(width, height, offset)
+	console.log(noise2D)
+	let i = 0;
+	for(let x = 0; x < width; x++){
+			for(let y = 0; y < height; y++){
+				dummy.position.x = x - width / 2;
+				dummy.position.z = y - height / 2;
+				dummy.position.y = 0;
+
+				const noisePoint = noise2D[x][y];
+				const color = getTerrainColor(noisePoint)
+				
+				dummy.updateMatrix();
+				mesh.setMatrixAt(i, dummy.matrix);
+				mesh.setColorAt(i, color);
+
+              	i++;
+
+			}			
 		}
-	return objects;
+	
+	mesh.instanceMatrix.needsUpdate = true;
+	// return objects;
 }
 
 
@@ -192,7 +208,7 @@ function Generate(width, height, scale, waves, offset){
 	return noiseMap;
 }
 
-function GenerateFbm(width, height, scale, offset){
+function GenerateFbm(width, height, offset){
 	const noiseMap = [];
 	// const fbm = new FBM({
 	// 	seed: Math.random(),
@@ -210,8 +226,8 @@ function GenerateFbm(width, height, scale, offset){
         octaves: 5,
         persistance: 0.5,
         lacunarity: 2,
-        redistribution: 1,
-        height: 0,
+        // redistribution: 1,
+        // height: 0,
 	})
 
 	for(let x = 0; x < width; ++x){
@@ -235,18 +251,25 @@ function GenerateFbm(width, height, scale, offset){
 }
 
 function getTerrainColor(fbmNoiseValue){
-	if( fbmNoiseValue < -0.7)
+	if( fbmNoiseValue < -0.5){
 		//water floor
 		return new THREE.Color(0x5fade2);
-	if(fbmNoiseValue < -0.45)
+	}
+	if(fbmNoiseValue < -0.35){
 		//dirt floor
 		return new THREE.Color(0x873600);
-	if(fbmNoiseValue < -0.3)
+	}
+	if(fbmNoiseValue < -0.1){
 		//sand/rock	floor
 		return new THREE.Color(0xb2babb);
-	if(-0.3 <= fbmNoiseValue)
+	} else{
 		//solid rock
 		return new THREE.Color(0x5d6d7e);					
+	}
+}
+
+function inRange(x, min, max) {
+  return x >= min && x <= max;
 }
 
 </script>
