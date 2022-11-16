@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8"/>
+	<!-- Three js-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r127/three.min.js"></script>
+	<!-- Dat gui GUI library-->
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.9/dat.gui.js"></script>
+	<!-- Noise library-->
+	<script type="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/4.0.1/simplex-noise.ts"></script>
+	<script src="./main.js"></script>
+	<script src="lib/three-noise.js"></script>
+
+	<title>Dwarf Station map gen</title>
+	<link rel="icon" type="image/png" href="./images/dorf_stolen.png">
+		<style>
+			body { margin: 0; }
+		</style>
+</head>
+<body>
+
+<script>
+	var objects = null;
+
+</script>
+
+
+<script type="module">
+
+import { OrbitControls } from 'https://unpkg.com/three@0.127.0/examples/jsm/controls/OrbitControls.js';
+import { createNoise2D  } from 'https://unpkg.com/simplex-noise@4.0.1/dist/esm/simplex-noise.js';
+
+const { Perlin, FBM } = THREE_Noise;
+
+//Renderer initialization
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+const renderer = new THREE.WebGLRenderer();
+const controls = new OrbitControls( camera, renderer.domElement )
+
+renderer.setSize( window.innerWidth, window.innerHeight );
+document.body.appendChild( renderer.domElement );
+camera.position.z = 50
+
+//Renderer frame
+function animate() {
+	requestAnimationFrame( animate );
+	controls.update();
+	renderer.render( scene, camera );
+}
+animate();
+
+const wave = [
+	{
+	seed: 3,
+	frequency: 1,
+	amplitude: 1,
+	},
+	{
+		seed: 56,
+		frequency: 3,
+		amplitude: 0.2,
+	}
+]
+
+
+//GUI
+var FizzyText = function () {
+    this.width = 50;
+    this.height = 50;
+	this.elevation = 1;
+	this.offsetX = 2;
+	this.offsetY = 1;
+	this.generateMap = ()=>{
+		// render()
+		scene.clear();
+		const objects = renderPlane(this.width, this.height);
+		const offset = new THREE.Vector2(this.offsetX, this.offsetY); 
+		colorSimplexNoise(objects, this.elevation, wave, offset);
+	};
+};
+
+var gui = new dat.GUI();
+var text = new FizzyText();
+var width = gui.add(text, 'width', 0, 400);
+var height = gui.add(text, 'height', 0, 500);
+var elevation = gui.add(text, 'elevation', 0, 10);
+var generateMap = gui.add(text, 'generateMap');
+var offsetX = gui.add(text, 'offsetX', 0);
+var offsetY = gui.add(text, 'offsetY', 0);
+
+/* Slide validator/fixer */
+var resetSliders = function (name) {
+    for (var i = 0; i < gui.__controllers.length; i++) {
+        if (!gui.__controllers.property == name)
+            gui.__controllers[i].setValue(0);
+    }
+};
+
+// Events on sliders
+height.onChange(function (value) {
+    console.log(value);
+    resetSliders('height');
+});
+
+width.onChange(function (value) {
+    console.log(value);
+    resetSliders('width');
+});
+
+function renderPlane(width, height){
+	let objects = [];
+	for(let i = 0; i < width; i++){
+			let row = [];
+			for(let j = 0; j < height; j++){
+				const geometry = new THREE.BoxGeometry( 1, 1, 1 );
+				const material = new THREE.MeshBasicMaterial( {color: Math.random() * 0xffffff, side: THREE.DoubleSide} );
+				const plane = new THREE.Mesh( geometry, material );
+				plane.position.set(i - (width/2), - j + (height/2));
+				scene.add(plane);
+				row.push(plane)
+			}
+			objects.push(row);
+		}
+	return objects;
+}
+
+
+
+
+function colorSimplexNoise(objects, elevation, wave, offset){
+	const noise2D = createNoise2D();
+	const fbm = new FBM({
+		seed: Math.random()
+	})
+	const noiseMap = Generate(objects.length, objects[0].length, elevation, wave, offset)
+
+	for(const row of objects){
+		for(const object of row){
+			const noiseInPoint = noiseMap[object.position.x, object.position.y]
+			console.log(noiseInPoint);
+			// const noiseInPoint = calculateElevationNoise(noise2D, object.position.x, object.position.y, elevation);
+			object.material.color = new THREE.Color(noiseInPoint, noiseInPoint, noiseInPoint);
+			object.position.set(object.position.x, object.position.y, noiseInPoint);
+
+		}
+
+	}
+}
+
+function calculateElevationNoise(noise, x, y, elevation){
+	const noiseSum = 4 * noise(x/4,y/4) + 2 * noise(x/2,y/2) + 1 * noise(x,y)
+	 + 0.5 * noise(x * 2 +13 , y * 2 + 14) * 0.25 * noise(x * 4 + 15, y * 4 + 16) +
+	 0.125 * noise(x * 8 +13 , y * 8 + 14) +  0.625 * noise(x * 16 +13 , y * 16 + 14);
+	const noiseNormalized = noiseSum / (4+ 2+ 1 + 0.5 + 0.25 + 0.125 + 0.625);
+	const elevationValue= Math.pow(Math.abs(noiseNormalized), Math.abs(elevation));
+	console.log(elevationValue, noiseSum , noiseNormalized )
+	return elevationValue;
+}
+
+class Wave{
+	seed;
+	frequency;
+	amplitude;
+}
+
+function Generate(width, height, scale, waves, offset){
+	const noiseMap = [];
+	const fbm = new FBM({
+		seed: Math.random()
+	})
+	const perlin = new Perlin(Math.random());
+
+	for(let x = 0; x < width; ++x){
+		let row = []
+		for(let y = 0; y < height; ++y){
+			const samplePosX = x * scale + offset.x;
+            const samplePosY = y * scale + offset.y;
+            let normalization = 0;
+			let noisePoint = 0;
+            // loop through each wave
+            for(const wave of waves){
+                // sample the perlin noise taking into consideration amplitude and frequency
+				const vector2 = new THREE.Vector2(samplePosX * wave.frequency + wave.seed, samplePosY * wave.frequency + wave.seed);
+				console.log("First",samplePosX * wave.frequency + wave.seed)
+				console.log(samplePosY * wave.frequency + wave.seed)
+				console.log(perlin.get2(new THREE.Vector2(95, 19)))
+
+                noisePoint += wave.amplitude * perlin.get2(vector2);
+                normalization += wave.amplitude;
+				
+            }
+			row.push(noisePoint/ normalization);
+		}
+		noiseMap.push(row)
+	}
+
+	return noiseMap;
+}
+
+</script>
+</body>
