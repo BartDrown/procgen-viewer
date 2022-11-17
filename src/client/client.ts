@@ -71,26 +71,28 @@ function renderPlane(dimensions: Vector3, offset: Vector3){
     const material = new THREE.MeshBasicMaterial(
     //{color: 0x00ff00,wireframe: true}
     );
-    const count = dimensions.x * dimensions.y;
+    const count = dimensions.x * dimensions.y * dimensions.z;
 	const mesh = new THREE.InstancedMesh(geometry, material, count);
 	const dummy = new THREE.Object3D();
 	mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); // will be updated every frame
 	scene.add(mesh);
 	
-	const noise2D = GenerateFbm(dimensions, offset)
+	const noise3D = GenerateFbm(dimensions, offset)
 	let i = 0;
-	for(let x = 0; x < dimensions.x; x++){ 
+	for(let z = 0; z < dimensions.z; z++){
+		for(let x = 0; x < dimensions.x; x++){ 
 			for(let y = 0; y < dimensions.y; y++){
-				dummy.position.x = x - dimensions.x / 2;
-				dummy.position.z = y - dimensions.y / 2;
-				dummy.position.y = 0;
+					dummy.position.x = x - dimensions.x / 2;
+					dummy.position.z = y - dimensions.y / 2;
+					dummy.position.y = z - dimensions.z / 2;
 
-				const noisePoint = noise2D[x][y];
-				const color = getTerrainColor(noisePoint)
-				dummy.updateMatrix();
-				mesh.setMatrixAt(i, dummy.matrix);
-				mesh.setColorAt(i, color);
-              	i++;
+					const noisePoint = noise3D[z][x][y];
+					const color = getTerrainColor(noisePoint)
+					dummy.updateMatrix();
+					mesh.setMatrixAt(i, dummy.matrix);
+					mesh.setColorAt(i, color);
+					i++;
+				}
 			}			
 		}
 	
@@ -118,22 +120,26 @@ function GenerateFbm(dimensions: Vector3, offset: Vector3){
         // redistribution: 1,
         // height: 0,
 	})
+	for(let z = 0; z < dimensions.z; ++z){
+		let column = [];
+		for(let x = 0; x < dimensions.x; ++x){
+			let row = []
+			for(let y = 0; y < dimensions.y; ++y){
+				
+				const samplePosX = x + offset.x;
+				const samplePosY = y + offset.y;
+				const samplePosZ = z + offset.z;
+				let noisePoint = 0;
+				// loop through each wave
 
-	for(let x = 0; x < dimensions.x; ++x){
-		let row = []
-		for(let y = 0; y < dimensions.y; ++y){
-			const samplePosX = x + offset.x;
-            const samplePosY = y + offset.y;
-			let noisePoint = 0;
-            // loop through each wave
+				const vector3 = new THREE.Vector3(samplePosX, samplePosY, samplePosZ )
+				noisePoint = fbm.get3(vector3);
 
-			const vector2 = new THREE.Vector2(samplePosX, samplePosY )
-			noisePoint = fbm.get2(vector2);
-
-
-			row.push(noisePoint);
+				row.push(noisePoint);
+			}
+			column.push(row)
 		}
-		noiseMap.push(row)
+		noiseMap.push(column)
 	}
 
 	return noiseMap;
