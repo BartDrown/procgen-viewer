@@ -2,6 +2,7 @@ import * as THREE from 'three'
 
 import { Biome } from './types/biome'
 import { GUI } from 'dat.gui'
+import { NoiseConfig } from './types/noiseConfig'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import Stats from 'three/examples/jsm/libs/stats.module'
 import { Turf } from './types/turf'
@@ -36,7 +37,14 @@ const gui = new GUI()
 
 const geometry = new THREE.Vector3(50, 50, 50);
 const offset = new THREE.Vector3();
-const randomness = {seed: 0};
+const randomness: NoiseConfig = {
+    seed: 0,
+    scale: 0.03,
+    octaves: 5,
+    persistance: 0.5,
+    lacunarity: 2,
+};
+const config = {liveReload: false};
 
 gui.useLocalStorage = true;
 gui.remember(geometry)
@@ -44,22 +52,27 @@ gui.remember(offset)
 gui.remember(randomness)
 
 const geometryFolder = gui.addFolder('Geometry')
-geometryFolder.add(geometry, 'x', 0, 1000)
-geometryFolder.add(geometry, 'y', 0, 1000)
-geometryFolder.add(geometry, 'z', 0, 1000)
-geometryFolder.add({ GenerateGeometry : ()=>{ 
+geometryFolder.add(geometry, 'x', 0, 1000).onFinishChange(pinLiveReload)
+geometryFolder.add(geometry, 'y', 0, 1000).onFinishChange(pinLiveReload)
+geometryFolder.add(geometry, 'z', 0, 1000).onFinishChange(pinLiveReload)
+const generateGeometryButton = geometryFolder.add({ GenerateGeometry : ()=>{ 
     scene.clear();
-    const mesh = renderPlane(geometry, offset, randomness.seed);
+    const mesh = renderPlane(geometry, offset, randomness);
 	scene.add(mesh);
 }}, 'GenerateGeometry').name('Generate Geometry')
 geometryFolder.open()
 const noiseFolder = gui.addFolder('Noise')
-noiseFolder.add(randomness, 'seed', 0, 99999)
-noiseFolder.add(offset, 'x', 0, 10)
-noiseFolder.add(offset, 'y', 0, 10)
-noiseFolder.add(offset, 'z', 0, 10)
-noiseFolder.open()
+noiseFolder.add(randomness, 'seed', 0, 99999).onFinishChange(pinLiveReload)
+noiseFolder.add(randomness, 'scale', 0, 1000).onFinishChange(pinLiveReload)
+noiseFolder.add(randomness, 'octaves', 1, 100).onFinishChange(pinLiveReload)
+noiseFolder.add(randomness, 'persistance', 0, 1000).onFinishChange(pinLiveReload)
+noiseFolder.add(randomness, 'lacunarity', 0, 1000).onFinishChange(pinLiveReload)
 
+const offsetFolder = noiseFolder.addFolder('Noise offset');
+offsetFolder.add(offset, 'x', 0, 10).onFinishChange(pinLiveReload)
+offsetFolder.add(offset, 'y', 0, 10).onFinishChange(pinLiveReload)
+offsetFolder.add(offset, 'z', 0, 10).onFinishChange(pinLiveReload)
+offsetFolder.open()
 
 const biomesFolder = gui.addFolder('Biomes')
 const biomesData = localStorage.getItem('biomesData');
@@ -84,6 +97,8 @@ gui.add({ SaveAll : ()=>{
     localStorage.setItem('biomesData', JSON.stringify(biomes));
 }}, 'SaveAll').name('Save Biomes Data')
 
+gui.add(config, 'liveReload').name('Live Reload');
+
 function animate() {
     requestAnimationFrame(animate)
     controls.update();
@@ -107,8 +122,8 @@ function addBiomeControls(indexParam?: number, biomeParam?: Biome){
         biomes.push(biome);
     }
 
-    newFolder.add(biome, 'maxTemperature', -1000, 1000);
-    newFolder.add(biome, 'minTemperature', -1000, 1000);
+    newFolder.add(biome, 'maxTemperature', -1000, 1000).onFinishChange(pinLiveReload);
+    newFolder.add(biome, 'minTemperature', -1000, 1000).onFinishChange(pinLiveReload);
     
     
     newFolder.add({ AddTurf : ()=>{ 
@@ -139,9 +154,15 @@ function addTurfControls(folder: GUI, biome: Biome , indexParam?: number, turfPa
         biome.turfs.push(turf);
     }
 
-    turfFolder.add(turf, 'maxElevation', -1000, 1000);
-    turfFolder.add(turf, 'minElevation', -1000, 1000);
-    turfFolder.addColor(turf, 'color');
-    turfFolder.add(turf, 'visible');
+    turfFolder.add(turf, 'maxElevation', -1000, 1000).onFinishChange(pinLiveReload);
+    turfFolder.add(turf, 'minElevation', -1000, 1000).onFinishChange(pinLiveReload);
+    turfFolder.addColor(turf, 'color').onFinishChange(pinLiveReload);
+    turfFolder.add(turf, 'visible').onFinishChange(pinLiveReload);
 
+}
+
+function pinLiveReload(){
+    if(config.liveReload === true){
+        generateGeometryButton.fire()
+    }
 }

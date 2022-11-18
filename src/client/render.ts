@@ -2,10 +2,12 @@ import * as THREE from 'three'
 
 import { Color, Vector3 } from 'three';
 
+import { NoiseConfig } from './types/noiseConfig';
+
 const THREE_Noise = require('three-noise');
 const { Perlin, FBM } = THREE_Noise;
 
-export function renderPlane(dimensions: Vector3, offset: Vector3, seed: number){
+export function renderPlane(dimensions: Vector3, offset: Vector3, noiseConfig: NoiseConfig){
 	const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshBasicMaterial(
     //{color: 0x00ff00,wireframe: true}
@@ -15,7 +17,7 @@ export function renderPlane(dimensions: Vector3, offset: Vector3, seed: number){
 	const dummy = new THREE.Object3D();
 	mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); // will be updated every frame
 	
-	const noise3D = GenerateFbm(dimensions, offset, seed)
+	const noise3D = GenerateFbm(dimensions, offset, noiseConfig)
 	let i = 0;
 	for(let z = 0; z < dimensions.z; z++){
 		for(let x = 0; x < dimensions.x; x++){ 
@@ -39,7 +41,7 @@ export function renderPlane(dimensions: Vector3, offset: Vector3, seed: number){
     return mesh;
 }
 
-function GenerateFbm(dimensions: Vector3, offset: Vector3, seed: number){
+function GenerateFbm(dimensions: Vector3, offset: Vector3, noiseConfig: NoiseConfig){
 	const noiseMap = [];
 	// const fbm = new FBM({
 	// 	seed: Math.random(),
@@ -51,15 +53,26 @@ function GenerateFbm(dimensions: Vector3, offset: Vector3, seed: number){
     //     height: 0,
 	// })
 
-	const fbm = new FBM({
-		seed: seed ? seed :  Math.random(),
-		scale: 0.03,
-        octaves: 5,
-        persistance: 0.5,
-        lacunarity: 2,
+	// const fbm = new FBM({
+	// 	seed: seed ? seed :  Math.random(),
+	// 	scale: 0.03,
+    //     octaves: 5,
+    //     persistance: 0.5,
+    //     lacunarity: 2,
         // redistribution: 1,
         // height: 0,
+	// })
+
+	const fbm = new FBM({
+		seed: noiseConfig.seed ? noiseConfig.seed :  Math.random(),
+		scale: noiseConfig.scale,
+		octaves: noiseConfig.octaves,
+		persistance: noiseConfig.persistance,
+		lacunarity: noiseConfig.lacunarity,
+		// redistribution: 1,
+		// height: 0,
 	})
+
 	for(let z = 0; z < dimensions.z; ++z){
 		let column = [];
 		for(let x = 0; x < dimensions.x; ++x){
