@@ -1,13 +1,10 @@
 import * as THREE from 'three'
 
-import { Color, Vector3 } from 'three';
-
+import { Biome } from './types/biome'
 import { GUI } from 'dat.gui'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import Stats from 'three/examples/jsm/libs/stats.module'
-
-const THREE_Noise = require('three-noise');
-const { Perlin, FBM } = THREE_Noise;
+import { renderPlane } from './render'
 
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
@@ -43,7 +40,8 @@ geometryFolder.add(geometry, 'y', 0, 1000)
 geometryFolder.add(geometry, 'z', 0, 1000)
 geometryFolder.add({ GenerateGeometry : ()=>{ 
     scene.clear();
-    renderPlane(geometry, offset)
+    const mesh = renderPlane(geometry, offset, randomness.seed);
+	scene.add(mesh);
 }}, 'GenerateGeometry').name('Generate Geometry')
 geometryFolder.open()
 const noiseFolder = gui.addFolder('Noise')
@@ -52,6 +50,27 @@ noiseFolder.add(offset, 'x', 0, 10)
 noiseFolder.add(offset, 'y', 0, 10)
 noiseFolder.add(offset, 'z', 0, 10)
 noiseFolder.open()
+
+
+const biomesFolder = gui.addFolder('Biomes')
+const biomes: Biome[] =[]; 
+
+biomesFolder.add({ AddBiome : ()=>{ 
+    const biomeName = `Biome ${biomes.length + 1}`;
+    biomes.push(new Biome(biomeName, 1000, -10, []));
+    biomesFolder.addFolder(biomeName);
+}}, 'AddBiome').name('Add Biome')
+
+biomesFolder.add({ RemoveBiome : ()=>{ 
+    const biomeName = `Biome ${biomes.length}`;
+    if(biomes.length != 0){
+        biomes.pop();
+        biomesFolder.removeFolder(biomesFolder.__folders[biomeName])
+    }
+
+}}, 'RemoveBiome').name('Remove Biome')
+
+
 
 function animate() {
     requestAnimationFrame(animate)
@@ -65,106 +84,3 @@ function render() {
 }
 
 animate()
-
-function renderPlane(dimensions: Vector3, offset: Vector3){
-	const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshBasicMaterial(
-    //{color: 0x00ff00,wireframe: true}
-    );
-    const count = dimensions.x * dimensions.y * dimensions.z;
-	const mesh = new THREE.InstancedMesh(geometry, material, count);
-	const dummy = new THREE.Object3D();
-	mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); // will be updated every frame
-	scene.add(mesh);
-	
-	const noise3D = GenerateFbm(dimensions, offset)
-	let i = 0;
-	for(let z = 0; z < dimensions.z; z++){
-		for(let x = 0; x < dimensions.x; x++){ 
-			for(let y = 0; y < dimensions.y; y++){
-					dummy.position.x = x - dimensions.x / 2;
-					dummy.position.z = y - dimensions.y / 2;
-					dummy.position.y = z - dimensions.z / 2;
-
-					const noisePoint = noise3D[z][x][y];
-					const color = getTerrainColor(noisePoint)
-					dummy.updateMatrix();
-					mesh.setMatrixAt(i, dummy.matrix);
-					mesh.setColorAt(i, color);
-					i++;
-				}
-			}			
-		}
-	
-	mesh.instanceMatrix.needsUpdate = true;
-}
-
-function GenerateFbm(dimensions: Vector3, offset: Vector3){
-	const noiseMap = [];
-	// const fbm = new FBM({
-	// 	seed: Math.random(),
-	// 	scale: 0.06,
-    //     octaves: 6,
-    //     persistance: 0.5,
-    //     lacunarity: 2,
-    //     redistribution: 1,
-    //     height: 0,
-	// })
-
-	const fbm = new FBM({
-		seed: randomness.seed ? randomness.seed :  Math.random(),
-		scale: 0.03,
-        octaves: 5,
-        persistance: 0.5,
-        lacunarity: 2,
-        // redistribution: 1,
-        // height: 0,
-	})
-	for(let z = 0; z < dimensions.z; ++z){
-		let column = [];
-		for(let x = 0; x < dimensions.x; ++x){
-			let row = []
-			for(let y = 0; y < dimensions.y; ++y){
-				
-				const samplePosX = x + offset.x;
-				const samplePosY = y + offset.y;
-				const samplePosZ = z + offset.z;
-				let noisePoint = 0;
-				// loop through each wave
-
-				const vector3 = new THREE.Vector3(samplePosX, samplePosY, samplePosZ )
-				noisePoint = fbm.get3(vector3);
-
-				row.push(noisePoint);
-			}
-			column.push(row)
-		}
-		noiseMap.push(column)
-	}
-
-	return noiseMap;
-}
-
-function getTerrainColor(fbmNoiseValue: number){
-	if( fbmNoiseValue < -0.5){
-		//water floor
-		return new THREE.Color(0x5fade2);
-	}
-	if(fbmNoiseValue < -0.35){
-		//dirt floor
-		return new THREE.Color(0x873600);
-	}
-	if(fbmNoiseValue < -0.1){
-		//sand/rock	floor
-		return new THREE.Color(0xb2babb);
-	} else{
-		//solid rock
-		return new THREE.Color(0x5d6d7e);					
-	}
-}
-
-function inRange(x: number, min: number, max: number) {
-  return x >= min && x <= max;
-}
-
-
