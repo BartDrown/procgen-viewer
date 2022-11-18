@@ -71,7 +71,6 @@ biomesFolder.add({ AddBiome : ()=>{
 
 biomesFolder.add({ RemoveBiome : ()=>{ 
     const biomeToDelete = biomes.pop();
-    console.log(biomeToDelete)
     if(biomeToDelete){
         biomesFolder.removeFolder(biomesFolder.__folders[biomeToDelete.name])
     }
@@ -82,7 +81,6 @@ biomes.forEach((biome, index)=>{
 })
 
 gui.add({ SaveAll : ()=>{ 
-    console.log(biomes)
     localStorage.setItem('biomesData', JSON.stringify(biomes));
 }}, 'SaveAll').name('Save Biomes Data')
 
