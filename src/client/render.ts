@@ -2,12 +2,13 @@ import * as THREE from 'three'
 
 import { Color, Vector3 } from 'three';
 
+import { Biome } from './types/biome';
 import { NoiseConfig } from './types/noiseConfig';
 
 const THREE_Noise = require('three-noise');
 const { Perlin, FBM } = THREE_Noise;
 
-export function renderPlane(dimensions: Vector3, offset: Vector3, noiseConfig: NoiseConfig){
+export function renderPlane(dimensions: Vector3, offset: Vector3, noiseConfig: NoiseConfig, biomes: Biome[]){
 	const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshBasicMaterial(
     //{color: 0x00ff00,wireframe: true}
@@ -25,9 +26,14 @@ export function renderPlane(dimensions: Vector3, offset: Vector3, noiseConfig: N
 					dummy.position.x = x - dimensions.x / 2;
 					dummy.position.z = y - dimensions.y / 2;
 					dummy.position.y = z - dimensions.z / 2;
-
+					
 					const noisePoint = noise3D[z][x][y];
-					const color = getTerrainColor(noisePoint)
+					const { color, visible } = getTerrainColor(noisePoint, biomes)
+					
+					if(!visible){
+						dummy.position.y += 1000; 
+					}
+					
 					dummy.updateMatrix();
 					mesh.setMatrixAt(i, dummy.matrix);
 					mesh.setColorAt(i, color);
@@ -98,22 +104,17 @@ function GenerateFbm(dimensions: Vector3, offset: Vector3, noiseConfig: NoiseCon
 	return noiseMap;
 }
 
-function getTerrainColor(fbmNoiseValue: number){
-	if( fbmNoiseValue < -0.5){
-		//water floor
-		return new THREE.Color(0x5fade2);
+function getTerrainColor(fbmNoiseValue: number, biomes: Biome[]){
+	const biome = biomes[0];
+
+	for(const turf of biome.turfs){
+		if(inRange(fbmNoiseValue, turf.minElevation, turf.maxElevation)){
+			// RGB string contruction due to some linear color type fuckery 
+			const color = `rgb(${Math.round(turf.color.r)}, ${Math.round(turf.color.g)}, ${Math.round(turf.color.b)})`;
+			return { color: new THREE.Color(color), visible: turf.visible };
+		}
 	}
-	if(fbmNoiseValue < -0.35){
-		//dirt floor
-		return new THREE.Color(0x873600);
-	}
-	if(fbmNoiseValue < -0.1){
-		//sand/rock	floor
-		return new THREE.Color(0xb2babb);
-	} else{
-		//solid rock
-		return new THREE.Color(0x5d6d7e);					
-	}
+	return { color: new Color('white'), visible: true };
 }
 
 function inRange(x: number, min: number, max: number) {

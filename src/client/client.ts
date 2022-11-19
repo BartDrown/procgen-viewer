@@ -57,7 +57,7 @@ geometryFolder.add(geometry, 'y', 0, 1000).onFinishChange(pinLiveReload)
 geometryFolder.add(geometry, 'z', 0, 1000).onFinishChange(pinLiveReload)
 const generateGeometryButton = geometryFolder.add({ GenerateGeometry : ()=>{ 
     scene.clear();
-    const mesh = renderPlane(geometry, offset, randomness);
+    const mesh = renderPlane(geometry, offset, randomness, biomes);
 	scene.add(mesh);
 }}, 'GenerateGeometry').name('Generate Geometry')
 geometryFolder.open()
@@ -115,16 +115,15 @@ animate()
 function addBiomeControls(indexParam?: number, biomeParam?: Biome){
     const index = indexParam !== undefined ? indexParam : biomes.length
     const biomeName = biomeParam?.name ? biomeParam.name : `Biome ${index + 1}`;
-    const biome = biomeParam ? biomeParam : new Biome(biomeName, 10, -10, []);
+    const biome = biomeParam ? biomeParam : new Biome(biomeName, -1, 1, []);
     const newFolder = biomesFolder.addFolder(biomeName);
 
     if(biomeParam === undefined){
         biomes.push(biome);
     }
 
-    newFolder.add(biome, 'maxTemperature', -1000, 1000).onFinishChange(pinLiveReload);
-    newFolder.add(biome, 'minTemperature', -1000, 1000).onFinishChange(pinLiveReload);
-    
+    newFolder.add(biome, 'minTemperature', -1, 1).onFinishChange(pinLiveReload);
+    newFolder.add(biome, 'maxTemperature', -1, 1).onFinishChange(pinLiveReload);
     
     newFolder.add({ AddTurf : ()=>{ 
         addTurfControls(newFolder, biome);
@@ -147,15 +146,15 @@ function addBiomeControls(indexParam?: number, biomeParam?: Biome){
 function addTurfControls(folder: GUI, biome: Biome , indexParam?: number, turfParam?: Turf){
     const index = indexParam !== undefined ? indexParam : biome.turfs.length;
     const turfName = turfParam?.name ? turfParam.name : `Turf ${index + 1}`;
-    const turf = turfParam ? turfParam : new Turf(turfName, 10, -10, new THREE.Color(0xffffff), true);
+    const turf = turfParam ? turfParam : new Turf(turfName, -1, 1, new THREE.Color(0xffffff), true);
     const turfFolder = folder.addFolder(turfName);
 
     if(turfParam === undefined){
         biome.turfs.push(turf);
     }
 
-    turfFolder.add(turf, 'maxElevation', -1000, 1000).onFinishChange(pinLiveReload);
-    turfFolder.add(turf, 'minElevation', -1000, 1000).onFinishChange(pinLiveReload);
+    turfFolder.add(turf, 'minElevation', -1, 1, 0.01).onFinishChange(pinLiveReload);
+    turfFolder.add(turf, 'maxElevation', -1, 1, 0.01).onFinishChange(pinLiveReload);
     turfFolder.addColor(turf, 'color').onFinishChange(pinLiveReload);
     turfFolder.add(turf, 'visible').onFinishChange(pinLiveReload);
 

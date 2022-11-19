@@ -5,13 +5,13 @@ export class Turf{
     color: Color;
     visible: boolean = true;
 
-    maxElevation: number = Number.MAX_VALUE;
-    minElevation: number = Number.MAX_VALUE;
+    minElevation: number = -1;
+    maxElevation: number = 1;
 
-    constructor(name: string, maxElevation: number, minElevation: number, color: Color, visible: boolean ){
+    constructor(name: string, minElevation: number, maxElevation: number,  color: Color, visible: boolean ){
         this.name = name;
-        this.maxElevation = maxElevation;
         this.minElevation = minElevation;
+        this.maxElevation = maxElevation;
         this.color = color;
         this.visible = visible;
     }

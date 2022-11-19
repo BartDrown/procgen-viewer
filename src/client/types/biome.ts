@@ -2,15 +2,16 @@ import { Turf } from "./turf";
 
 export class Biome {
     name: string = "";
-    maxTemperature: number = Number.MAX_VALUE;
+
     minTemperature: number = -1 ;
+    maxTemperature: number = 1;
 
     turfs: Turf[];
 
-    constructor(name: string, maxTemperature: number, minTemperature: number, turfs: Turf[] ){
+    constructor(name: string, minTemperature: number, maxTemperature: number, turfs: Turf[] ){
         this.name = name;
-        this.maxTemperature = maxTemperature;
         this.minTemperature = minTemperature;
+        this.maxTemperature = maxTemperature;
         this.turfs = turfs;
     }
 }
