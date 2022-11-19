@@ -22,8 +22,8 @@ module.exports = {
     plugins: [
         new CopyWebpackPlugin({
             patterns: [
-                { from: 'static' },
-                { from: 'static/images' }
+                { from: 'docs' },
+                { from: 'docs/images' }
             ]
         })
     ]
